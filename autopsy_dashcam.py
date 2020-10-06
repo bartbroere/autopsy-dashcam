@@ -1,5 +1,7 @@
 import inspect
 import platform
+import subprocess
+import json
 
 if platform.system() == 'Java':  # Jython runtime imports
     from java.util.logging import Level
@@ -17,7 +19,7 @@ if platform.system() == 'Java':  # Jython runtime imports
     from org.sleuthkit.datamodel import TskData
 
 
-    class SampleJythonFileIngestModuleFactory(IngestModuleFactoryAdapter):
+    class GeolocationBlackvue(IngestModuleFactoryAdapter):
         moduleName = "Geolocation from BlackVue dashcam recordings"
 
         def getModuleDisplayName(self):
@@ -40,7 +42,7 @@ if platform.system() == 'Java':  # Jython runtime imports
 
 
     class SampleJythonFileIngestModule(FileIngestModule):
-        _logger = Logger.getLogger(SampleJythonFileIngestModuleFactory.moduleName)
+        _logger = Logger.getLogger(GeolocationBlackvue.moduleName)
 
         def log(self, level, msg):
             self._logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], msg)
@@ -59,38 +61,38 @@ if platform.system() == 'Java':  # Jython runtime imports
             if file.getName().lower().endswith(".mp4"):
                 inputStream = ReadContentInputStream(file)
                 self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + file.getName())
-                if hasattr(platform, 'win32_ver'):
-                    self.log(Level.INFO, 'On Windows')
-                    # TODO call our "binary" and pipe our inputstream into it
-                else:  # for now we hope we're on Linux, but anything's possible of course
-                    self.log(Level.INFO, 'Not on Windows, assuming / hoping Linux amd64')
+                platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
+                # call our "binary" and pipe our inputstream into it
+                locations = json.loads(
+                    subprocess.check_output('./bin/autopsy_dashcam' + platform_suffix, stdin=inputStream)
+                )
 
-                # TODO change artifact type to location trace
-                art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_INTERESTING_FILE_HIT)
-                att = BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME.getTypeID(),
-                                          SampleJythonFileIngestModuleFactory.moduleName, "Dashcam Location")
-                art.addAttribute(att)
+                for location in locations:
+                    art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACK)
+                    # TODO fill in appropriate attributes for geolocations
+                    art.addAttribute(BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME.getTypeID(),
+                                                         GeolocationBlackvue.moduleName,
+                                                         "Dashcam Location"))
 
-                # Fire an event to notify the UI and others that there is a new artifact
-                IngestServices.getInstance().fireModuleDataEvent(
-                    ModuleDataEvent(SampleJythonFileIngestModuleFactory.moduleName,
-                                    BlackboardArtifact.ARTIFACT_TYPE.TSK_INTERESTING_FILE_HIT, None));
+                    # Fire an event to notify the UI and others that there is a new artifact
+                    IngestServices.getInstance().fireModuleDataEvent(
+                        ModuleDataEvent(GeolocationBlackvue.moduleName,
+                                        BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACK, None)
+                    )
 
             return IngestModule.ProcessResult.OK
 
         def shutDown(self):
             message = IngestMessage.createMessage(
-                IngestMessage.MessageType.DATA, SampleJythonFileIngestModuleFactory.moduleName,
+                IngestMessage.MessageType.DATA, GeolocationBlackvue.moduleName,
                 self.platform)
             ingestServices = IngestServices.getInstance().postMessage(message)
-
 
 # Python 3 code from here on
 if __name__ == '__main__':
     from pymp4 import parser
     import re
     import pynmea2
-    import json
 
     # TODO open from stdin
     with open('C:\\Users\TEMP\Downloads\\vid.mp4', 'rb') as f:
