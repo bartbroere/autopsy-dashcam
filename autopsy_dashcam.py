@@ -5,9 +5,13 @@ if platform.system() == 'Java':  # Jython runtime imports
     from java.util.logging import Level
     from org.sleuthkit.autopsy.coreutils import Logger
     from org.sleuthkit.autopsy.ingest import FileIngestModule
+    from org.sleuthkit.datamodel import BlackboardArtifact
+    from org.sleuthkit.datamodel import BlackboardAttribute
+    from org.sleuthkit.datamodel import TskData
     from org.sleuthkit.autopsy.ingest import IngestMessage
     from org.sleuthkit.autopsy.ingest import IngestModule
     from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
+    from org.sleuthkit.autopsy.ingest import ModuleDataEvent
     from org.sleuthkit.autopsy.ingest import IngestServices
     from org.sleuthkit.datamodel import ReadContentInputStream
     from org.sleuthkit.datamodel import TskData
@@ -49,7 +53,7 @@ if platform.system() == 'Java':  # Jython runtime imports
             # Skip non-files
             if ((file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNALLOC_BLOCKS) or
                     (file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNUSED_BLOCKS) or
-                    (file.isFile() == False)):
+                    (not file.isFile())):
                 return IngestModule.ProcessResult.OK
 
             if file.getName().lower().endswith(".mp4"):
@@ -60,6 +64,17 @@ if platform.system() == 'Java':  # Jython runtime imports
                     # TODO call our "binary" and pipe our inputstream into it
                 else:  # for now we hope we're on Linux, but anything's possible of course
                     self.log(Level.INFO, 'Not on Windows, assuming / hoping Linux amd64')
+
+                # TODO change artifact type to location trace
+                art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_INTERESTING_FILE_HIT)
+                att = BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME.getTypeID(),
+                                          SampleJythonFileIngestModuleFactory.moduleName, "Dashcam Location")
+                art.addAttribute(att)
+
+                # Fire an event to notify the UI and others that there is a new artifact
+                IngestServices.getInstance().fireModuleDataEvent(
+                    ModuleDataEvent(SampleJythonFileIngestModuleFactory.moduleName,
+                                    BlackboardArtifact.ARTIFACT_TYPE.TSK_INTERESTING_FILE_HIT, None));
 
             return IngestModule.ProcessResult.OK
 
@@ -77,6 +92,7 @@ if __name__ == '__main__':
     import pynmea2
     import json
 
+    # TODO open from stdin
     with open('C:\\Users\TEMP\Downloads\\vid.mp4', 'rb') as f:
         while True:
             mp4 = parser.Box.parse_stream(f)
