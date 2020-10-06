@@ -59,12 +59,12 @@ if platform.system() == 'Java':  # Jython runtime imports
                 return IngestModule.ProcessResult.OK
 
             if file.getName().lower().endswith(".mp4"):
-                inputStream = ReadContentInputStream(file)
                 self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + file.getName())
                 platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
                 # call our "binary" and pipe our inputstream into it
                 locations = json.loads(
-                    subprocess.check_output('./bin/autopsy_dashcam' + platform_suffix, stdin=inputStream)
+                    subprocess.check_output('./bin/autopsy_dashcam' + platform_suffix,
+                                            stdin=ReadContentInputStream(file))
                 )
 
                 for location in locations:
