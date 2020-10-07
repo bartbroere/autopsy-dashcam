@@ -1,8 +1,7 @@
 import inspect
+import json
 import platform
 import subprocess
-import json
-import sys
 
 if platform.system() == 'Java':  # Jython runtime imports
     from java.util.logging import Level
@@ -64,7 +63,7 @@ if platform.system() == 'Java':  # Jython runtime imports
                 platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
                 # call our "binary" and pipe our inputstream into it
                 locations = json.loads(
-                    subprocess.check_output('./bin/autopsy_dashcam' + platform_suffix,
+                    subprocess.check_output('./dist/autopsy_dashcam.exe' + platform_suffix,
                                             stdin=ReadContentInputStream(file))
                 )
 
@@ -74,6 +73,13 @@ if platform.system() == 'Java':  # Jython runtime imports
                     art.addAttribute(BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME.getTypeID(),
                                                          GeolocationBlackvue.moduleName,
                                                          "Dashcam Location"))
+                    # org.sleuthkit.datamodel.blackboardutils.attributes.GeoTrackPoints
+                    # .addpoint
+                    # http://sleuthkit.org/sleuthkit/docs/jni-docs/4.9.0//classorg_1_1sleuthkit_1_1datamodel_1_1blackboardutils_1_1attributes_1_1_geo_track_points_1_1_track_point.html
+                    art.addAttribute(BlackboardAttribute(BlackboardArtifact.ATTRIBUTE_TYPE.TSK_GEO_TRACKPOINTS,
+                                                         GeolocationBlackvue.moduleName,
+                                                         todo_json_of_trackpoints)
+                    # https://github.com/sleuthkit/sleuthkit/blob/fc8a10ea3fc1c05ee61cfd8303bc6fbc0c6db0a9/bindings/java/src/org/sleuthkit/datamodel/blackboardutils/GeoArtifactsHelper.java#L84-L112
 
                     # Fire an event to notify the UI and others that there is a new artifact
                     IngestServices.getInstance().fireModuleDataEvent(
