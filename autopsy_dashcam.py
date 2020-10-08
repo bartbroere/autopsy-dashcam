@@ -1,8 +1,10 @@
 import inspect
 import json
+import os
 import platform
 import subprocess
 import tempfile
+import traceback
 
 import jarray
 from java.util.logging import Level
@@ -77,7 +79,12 @@ class SampleJythonFileIngestModule(FileIngestModule):
             # call our "binary" and supply our temporary file
             # TODO pipe our file in instead of making a temporary copy
             output = subprocess.check_output(
-                './dist/parse_mp4' + platform_suffix + ' ' + temporary.name)
+                os.path.join(
+                    os.path.dirname(os.path.realpath(__file__)),
+                    'dist',
+                    'parse_mp4'
+                ) + platform_suffix + ' ' + temporary.name
+            )
             locations = json.loads(output)
 
             for unix, lat, lon in locations:
