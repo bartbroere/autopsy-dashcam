@@ -1,0 +1,48 @@
+name: Compile the required binaries
+on: push
+jobs:
+  build:
+    name: Compile the required binaries
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        sudo dpkg --add-architecture i386
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+        sudo apt update
+        sudo apt install --no-install-recommends -qfy apt-transport-https software-properties-common wget zip unzip
+        wget -nv https://dl.winehq.org/wine-builds/winehq.key
+        sudo apt-key add winehq.key
+        sudo add-apt-repository 'https://dl.winehq.org/wine-builds/ubuntu/'
+        wget https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/Release.key
+        sudo apt-key add Release.key
+        sudo apt-add-repository 'deb https://download.opensuse.org/repositories/Emulators:/Wine:/Debian/xUbuntu_18.04/ ./'
+        sudo apt update
+        sudo apt install libfaudio0 libasound2-plugins:i386 -y
+        sudo apt install wine64 winehq-staging
+        wget -nv https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
+        sudo chmod +x winetricks
+        sudo mv winetricks /usr/local/bin
+        winetricks win7
+        for msifile in `echo core dev exe lib path pip tcltk tools`; do wget -nv "https://www.python.org/ftp/python/3.7.5/amd64/${msifile}.msi"; wine msiexec /i "${msifile}.msi" /qb TARGETDIR=C:/Python37; rm ${msifile}.msi; done
+        wine 'C:\Python37\python.exe' -m pip install pyinstaller
+    - name: Build a Linux binary
+      run: |
+        pyinstaller -F parse_mp4.py
+    - name: Build a Windows binary
+      run: |
+        wine 'C:\Python37\Scripts\pyinstaller.exe' -F parse_mp4.py
+    - name: Zip everything
+      run: |
+        zip -r autopsydashcam.zip .
+    - uses: actions/upload-artifact@v2
+      with:
+        name: autopsydashcam
+        path: autopsydashcam.zip
