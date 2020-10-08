@@ -2,136 +2,99 @@ import inspect
 import json
 import platform
 import subprocess
+import tempfile
 
-if platform.system() == 'Java':  # Jython runtime imports
-    from java.util.logging import Level
-    from org.sleuthkit.autopsy.coreutils import Logger
-    from org.sleuthkit.autopsy.ingest import FileIngestModule
-    from org.sleuthkit.datamodel import BlackboardArtifact
-    from org.sleuthkit.datamodel import BlackboardAttribute
-    from org.sleuthkit.datamodel import TskData
-    from org.sleuthkit.autopsy.ingest import IngestMessage
-    from org.sleuthkit.autopsy.ingest import IngestModule
-    from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
-    from org.sleuthkit.autopsy.ingest import ModuleDataEvent
-    from org.sleuthkit.autopsy.ingest import IngestServices
-    from org.sleuthkit.datamodel import ReadContentInputStream
-    from org.sleuthkit.datamodel import TskData
-
-
-    class GeolocationBlackvue(IngestModuleFactoryAdapter):
-        moduleName = "Geolocation from BlackVue dashcam recordings"
-
-        def getModuleDisplayName(self):
-            return self.moduleName
-
-        # TODO: Give it a description
-        def getModuleDescription(self):
-            return "Get geolocation data from Blackvue dashcam recordings"
-
-        def getModuleVersionNumber(self):
-            return "2020.10.6"
-
-        # Return true if module wants to get called for each file
-        def isFileIngestModuleFactory(self):
-            return True
-
-        # can return null if isFileIngestModuleFactory returns false
-        def createFileIngestModule(self, ingestOptions):
-            return SampleJythonFileIngestModule()
+import jarray
+from java.util.logging import Level
+from org.sleuthkit.autopsy.coreutils import Logger
+from org.sleuthkit.autopsy.ingest import FileIngestModule
+from org.sleuthkit.autopsy.ingest import IngestMessage
+from org.sleuthkit.autopsy.ingest import IngestModule
+from org.sleuthkit.autopsy.ingest import IngestModuleFactoryAdapter
+from org.sleuthkit.autopsy.ingest import IngestServices
+from org.sleuthkit.autopsy.ingest import ModuleDataEvent
+from org.sleuthkit.datamodel import BlackboardArtifact
+from org.sleuthkit.datamodel import BlackboardAttribute
+from org.sleuthkit.datamodel import TskData
 
 
-    class SampleJythonFileIngestModule(FileIngestModule):
-        _logger = Logger.getLogger(GeolocationBlackvue.moduleName)
+class GeolocationBlackvue(IngestModuleFactoryAdapter):
+    moduleName = "Geolocation BlackVue dashcam"
 
-        def log(self, level, msg):
-            self._logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], msg)
+    def getModuleDisplayName(self):
+        return self.moduleName
 
-        def startUp(self, context):
-            self.platform = ''
-            pass
+    # TODO: Give it a description
+    def getModuleDescription(self):
+        return "Get geolocation data from Blackvue dashcam recordings"
 
-        def process(self, file):
-            # Skip non-files
-            if ((file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNALLOC_BLOCKS) or
-                    (file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNUSED_BLOCKS) or
-                    (not file.isFile())):
-                return IngestModule.ProcessResult.OK
+    def getModuleVersionNumber(self):
+        return "2020.10.8"
 
-            if file.getName().lower().endswith(".mp4"):
-                self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + file.getName())
-                platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
-                # call our "binary" and pipe our inputstream into it
-                # locations = json.loads(
-                #     subprocess.check_output('./dist/autopsy_dashcam.exe' + platform_suffix,
-                #                             stdin=ReadContentInputStream(file))
-                # )
+    # Return true if module wants to get called for each file
+    def isFileIngestModuleFactory(self):
+        return True
 
-                # for location in locations:
-                art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACK)
-                # TODO fill in appropriate attributes for geolocations
-                art.addAttribute(BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.TSK_SET_NAME.getTypeID(),
-                                                     GeolocationBlackvue.moduleName,
-                                                     "Dashcam Location"))
-                # org.sleuthkit.datamodel.blackboardutils.attributes.GeoTrackPoints
-                # .addpoint
-                # http://sleuthkit.org/sleuthkit/docs/jni-docs/4.9.0//classorg_1_1sleuthkit_1_1datamodel_1_1blackboardutils_1_1attributes_1_1_geo_track_points_1_1_track_point.html
-                art.addAttribute(BlackboardAttribute(BlackboardArtifact.ATTRIBUTE_TYPE.TSK_GEO_TRACKPOINTS.getTypeID()),
-                                                     GeolocationBlackvue.moduleName,
-                                                     [[51.54333316666666, 4.2944045]])
-                # https://github.com/sleuthkit/sleuthkit/blob/fc8a10ea3fc1c05ee61cfd8303bc6fbc0c6db0a9/bindings/java/src/org/sleuthkit/datamodel/blackboardutils/GeoArtifactsHelper.java#L84-L112
+    # can return null if isFileIngestModuleFactory returns false
+    def createFileIngestModule(self, ingestOptions):
+        return SampleJythonFileIngestModule()
 
-                # Fire an event to notify the UI and others that there is a new artifact
-                IngestServices.getInstance().fireModuleDataEvent(
-                    ModuleDataEvent(GeolocationBlackvue.moduleName,
-                                    BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACK, None)
-                )
 
+class SampleJythonFileIngestModule(FileIngestModule):
+    _logger = Logger.getLogger(GeolocationBlackvue.moduleName)
+
+    def log(self, level, msg):
+        self._logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], msg)
+
+    def startUp(self, context):
+        self.platform = ''
+        pass
+
+    def process(self, file):
+        # Skip non-files
+        if ((file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNALLOC_BLOCKS) or
+                (file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNUSED_BLOCKS) or
+                (not file.isFile())):
             return IngestModule.ProcessResult.OK
 
-        def shutDown(self):
-            message = IngestMessage.createMessage(
-                IngestMessage.MessageType.DATA, GeolocationBlackvue.moduleName,
-                self.platform)
-            ingestServices = IngestServices.getInstance().postMessage(message)
+        def getBlackboardAtt(label, value):
+            return BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.fromLabel(label).getTypeID(),
+                                       GeolocationBlackvue.moduleName, value)
 
-# Python 3 code from here on
-if __name__ == '__main__':
-    import construct
-    from pymp4 import parser
-    import re
-    import pynmea2
+        if file.getName().lower().endswith(".mp4"):
+            self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + file.getName())
+            platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
 
-    # TODO open from stdin
-    with open('C:\\Users\TEMP\Downloads\\vid.mp4', 'rb') as f:
-        while True:
-            try:
-                mp4 = parser.Box.parse_stream(f)
-                # mp4 = parser.Box.parse_stream(sys.stdin)
-                if mp4.type == b'free':
-                    try:
-                        data = dict(mp4.__getstate__())['data']
-                        gps_data = data[data.find(b'gps [') + 4:data.find(b'\n\n\x00')]
-                        gps_data = gps_data.split(b'\n\n')
-                        gps_out = []
-                        previous_unix_ms = 0
-                        for line in gps_data:
-                            line = line.decode('utf8')
-                            unix_ms = re.findall(r'(?!\[)[0-9]*(?=\])', line)[0]
-                            try:
-                                parsed_nmea = pynmea2.parse(line.split(']')[-1])
-                                if hasattr(parsed_nmea, 'latitude'):
-                                    if unix_ms != previous_unix_ms:
-                                        lat = parsed_nmea.latitude
-                                        lon = parsed_nmea.longitude
-                                        gps_out.append([int(unix_ms), lat, lon])
-                                        previous_unix_ms = unix_ms
-                            except:
-                                continue
-                        print(json.dumps(gps_out))
-                        quit(0)
-                    except:
-                        continue
-            except construct.core.ConstError:
-                break
+            # get an input buffer
+            filesize = file.getSize()
+            buffer = jarray.zeros(filesize, 'b')
+            file.read(buffer, 0, filesize)
+            file.close()
 
+            temporary = tempfile.NamedTemporaryFile()
+            temporary.write(buffer)
+
+            # call our "binary" and supply our temporary file
+            # TODO pipe our file in instead of making a temporary copy
+            output = subprocess.check_output(
+                './dist/parse_mp4' + platform_suffix + ' ' + temporary.name)
+            locations = json.loads(output)
+
+            for unix, lat, lon in locations:
+                art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT)
+                lat = getBlackboardAtt("TSK_GEO_LATITUDE", lat)
+                lon = getBlackboardAtt("TSK_GEO_LONGITUDE", lon)
+                art.addAttributes([lat, lon])
+
+            IngestServices.getInstance().fireModuleDataEvent(
+                ModuleDataEvent(GeolocationBlackvue.moduleName,
+                                BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT, None)
+            )
+
+        return IngestModule.ProcessResult.OK
+
+    def shutDown(self):
+        message = IngestMessage.createMessage(
+            IngestMessage.MessageType.DATA, GeolocationBlackvue.moduleName,
+            self.platform)
+        ingestServices = IngestServices.getInstance().postMessage(message)
