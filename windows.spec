@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['autopsy_dashcam.py'],
-             pathex=['C:\\Users\\TEMP\\AppData\\Roaming\\.autopsy\\dev\\python_modules\\autopsy-dashcam'],
+a = Analysis(['parse_mp4.py'],
+             pathex=['C:\\Users\\TEMP\\AppData\\Roaming\\autopsy\\python_modules\\autopsy-dashcam'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -23,7 +23,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='autopsy_dashcam',
+          name='parse_mp4',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
