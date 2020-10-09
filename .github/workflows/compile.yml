@@ -33,12 +33,19 @@ jobs:
         winetricks win7
         for msifile in `echo core dev exe lib path pip tcltk tools`; do wget -nv "https://www.python.org/ftp/python/3.7.5/amd64/${msifile}.msi"; wine msiexec /i "${msifile}.msi" /qb TARGETDIR=C:/Python37; rm ${msifile}.msi; done
         wine 'C:\Python37\python.exe' -m pip install pyinstaller
+        wine 'C:\Python37\python.exe' -m pip install -r requirements.txt
     - name: Build a Linux binary
       run: |
         pyinstaller -F parse_mp4.py
     - name: Build a Windows binary
       run: |
         wine 'C:\Python37\Scripts\pyinstaller.exe' -F parse_mp4.py
+    - name: Clean up a bit
+      run: |
+        rm -rf __pycache__
+        rm -rf build
+        rm *.spec
+        rm *.key
     - name: Zip everything
       run: |
         zip -r autopsydashcam.zip .
