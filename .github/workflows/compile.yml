@@ -1,8 +1,5 @@
 name: Compile the required binaries
-on:
-  push:
-    branches:
-      - main
+on: push
 jobs:
   build:
     name: Compile the required binaries
@@ -57,11 +54,13 @@ jobs:
         name: autopsydashcam
         path: autopsydashcam.zip
     - name: Generate build number
+      if: github.ref == 'refs/heads/main'
       id: buildnumber
       uses: einaregilsson/build-number@v2 
       with:
         token: ${{secrets.github_token}}        
     - name: Create Release
+      if: github.ref == 'refs/heads/main'
       id: create_release
       uses: actions/create-release@v1
       env:
@@ -74,6 +73,7 @@ jobs:
         draft: false
         prerelease: false
     - name: Upload Release Asset
+      if: github.ref == 'refs/heads/main'
       id: upload-release-asset 
       uses: actions/upload-release-asset@v1
       env:
