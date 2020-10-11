@@ -90,8 +90,8 @@ class BlackVueFileIngest(FileIngestModule):
                 art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT)
                 lat = getBlackboardAtt("TSK_GEO_LATITUDE", lat)
                 lon = getBlackboardAtt("TSK_GEO_LONGITUDE", lon)
-                loc = getBlackboardAtt("TSK_GEO_DATETIME", unix)
-                art.addAttributes([lat, lon])
+                loc = getBlackboardAtt("TSK_DATETIME", unix)
+                art.addAttributes([lat, lon, loc])
 
             IngestServices.getInstance().fireModuleDataEvent(
                 ModuleDataEvent(GeolocationBlackvue.moduleName,
