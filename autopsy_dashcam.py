@@ -52,29 +52,29 @@ class SampleJythonFileIngestModule(FileIngestModule):
         self.platform = ''
         pass
 
-    def process(self, file):
+    def process(self, source_file):
         # Skip non-files
-        if ((file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNALLOC_BLOCKS) or
-                (file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNUSED_BLOCKS) or
-                (not file.isFile())):
+        if ((source_file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNALLOC_BLOCKS) or
+                (source_file.getType() == TskData.TSK_DB_FILES_TYPE_ENUM.UNUSED_BLOCKS) or
+                (not source_file.isFile())):
             return IngestModule.ProcessResult.OK
 
         def getBlackboardAtt(label, value):
             return BlackboardAttribute(BlackboardAttribute.ATTRIBUTE_TYPE.fromLabel(label).getTypeID(),
                                        GeolocationBlackvue.moduleName, value)
 
-        if file.getName().lower().endswith(".mp4"):
-            self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + file.getName())
+        if source_file.getName().lower().endswith(".mp4"):
+            self.log(Level.INFO, "Found a mp4 file, possibly a BlackVue dashcam recording: " + source_file.getName())
             platform_suffix = '.exe' if hasattr(platform, 'win32_ver') else ''
 
             # get an input buffer
-            filesize = file.getSize()
-            buffer = jarray.zeros(filesize, 'b')
-            file.read(buffer, 0, filesize)
-            file.close()
+            filesize = source_file.getSize()
+            input_buffer = jarray.zeros(filesize, 'b')
+            source_file.read(input_buffer, 0, filesize)
+            source_file.close()
 
             temporary = tempfile.NamedTemporaryFile()
-            temporary.write(buffer)
+            temporary.write(input_buffer)
 
             # call our "binary" and supply our temporary file
             # TODO pipe our file in instead of making a temporary copy
@@ -88,7 +88,7 @@ class SampleJythonFileIngestModule(FileIngestModule):
             locations = json.loads(output)
 
             for unix, lat, lon in locations:
-                art = file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT)
+                art = source_file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT)
                 lat = getBlackboardAtt("TSK_GEO_LATITUDE", lat)
                 lon = getBlackboardAtt("TSK_GEO_LONGITUDE", lon)
                 art.addAttributes([lat, lon])
