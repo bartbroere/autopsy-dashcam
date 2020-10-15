@@ -31,7 +31,7 @@ class GeolocationBlackvue(IngestModuleFactoryAdapter):
         return "Get geolocation data from Blackvue dashcam recordings"
 
     def getModuleVersionNumber(self):
-        return "2020.10.8"
+        return "2020.10.15"
 
     # Return true if module wants to get called for each file
     def isFileIngestModuleFactory(self):
@@ -42,14 +42,13 @@ class GeolocationBlackvue(IngestModuleFactoryAdapter):
         return SampleJythonFileIngestModule()
 
 
-class SampleJythonFileIngestModule(FileIngestModule):
+class BlackVueFileIngest(FileIngestModule):
     _logger = Logger.getLogger(GeolocationBlackvue.moduleName)
 
     def log(self, level, msg):
         self._logger.logp(level, self.__class__.__name__, inspect.stack()[1][3], msg)
 
     def startUp(self, context):
-        self.platform = ''
         pass
 
     def process(self, source_file):
@@ -91,7 +90,8 @@ class SampleJythonFileIngestModule(FileIngestModule):
                 art = source_file.newArtifact(BlackboardArtifact.ARTIFACT_TYPE.TSK_GPS_TRACKPOINT)
                 lat = getBlackboardAtt("TSK_GEO_LATITUDE", lat)
                 lon = getBlackboardAtt("TSK_GEO_LONGITUDE", lon)
-                art.addAttributes([lat, lon])
+                loc = getBlackboardAtt("TSK_DATETIME", unix)
+                art.addAttributes([lat, lon, loc])
 
             IngestServices.getInstance().fireModuleDataEvent(
                 ModuleDataEvent(GeolocationBlackvue.moduleName,
@@ -103,5 +103,5 @@ class SampleJythonFileIngestModule(FileIngestModule):
     def shutDown(self):
         message = IngestMessage.createMessage(
             IngestMessage.MessageType.DATA, GeolocationBlackvue.moduleName,
-            self.platform)
+            "Done processing BlackVue mp4 files")
         ingestServices = IngestServices.getInstance().postMessage(message)
