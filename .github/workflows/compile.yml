@@ -65,7 +65,7 @@ jobs:
         zip -r autopsydashcam.zip .
     - name: Generate build number
       id: buildnumber
-      uses: bartbroere/build-number@master
+      uses: einaregilsson/build-number@v2
       with:
         token: ${{secrets.github_token}}
     - name: Create Release
