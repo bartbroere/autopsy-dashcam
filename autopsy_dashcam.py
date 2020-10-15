@@ -31,7 +31,7 @@ class GeolocationBlackvue(IngestModuleFactoryAdapter):
         return "Get geolocation data from Blackvue dashcam recordings"
 
     def getModuleVersionNumber(self):
-        return "2020.10.11"
+        return "2020.10.15"
 
     # Return true if module wants to get called for each file
     def isFileIngestModuleFactory(self):
