@@ -61,6 +61,7 @@ jobs:
         workflow: compile.yml
     - name: Zip everything
       run: |
+        rm -rf .git*
         zip -r autopsydashcam.zip .
     - name: Generate build number
       id: buildnumber

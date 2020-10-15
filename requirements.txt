@@ -1,3 +1,2 @@
-construct
 pymp4
 pynmea2
